@@ -3,9 +3,25 @@
     <h1>Bookmarks</h1>
     <hr>
     <form method="$INTERNAL">
-        <p>Title: <input type="text" name="bookmark_title" width="400" value="$PREV_TITLE"></p>
-        <p>URL: <input type="text" name="bookmark_url" width="400" value="$PREV_URL"></p>
-        <button type="submit">Add</button>
+        <table>
+            <tr>
+                <td>
+                    Title:
+                </td>
+                <td>
+                    <input type="text" name="bookmark_title" width="400" value="$PREV_TITLE">
+                </td>
+            </tr>
+            <tr>
+                <td>
+                    URL:
+                    </td>
+                    <td>
+                        <input type="text" name="bookmark_url" width="400" value="$PREV_URL">
+                        <button type="submit">Add</button>
+                    </td>
+            </tr>
+        </table>
     </form>
     <hr>
     <form method="$INTERNAL">
