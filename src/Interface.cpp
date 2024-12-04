@@ -242,6 +242,13 @@ void AppInterface::Update()
 		case KEYCODE_F3:
 			ToggleStatusAndTitleBar();
 			break;
+		
+		case KEYCODE_F8:
+			OnBookmarkButtonPressed(NULL);
+			break;
+		case KEYCODE_F9:
+			OnSettingsButtonPressed(NULL);
+			break;
 
 		case KEYCODE_TAB:
 			CycleNodes(1);

@@ -27,6 +27,8 @@ To run you will need:
 | F3                | Toggle title bar / status bar visibility        |
 | F5                | Reload page                                     |
 | F6 / Ctrl+L       | Focus address bar                               |
+| F8                | Go to bookmarks                                 |
+| F9                | Go to settings                                  |
 | Tab / Shift+Tab   | Cycle through selectable page elements          |
 | Enter             | Follow link / press button                      |
 | Cursor up/down    | Scroll page                                     |
