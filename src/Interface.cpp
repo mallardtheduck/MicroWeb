@@ -733,7 +733,9 @@ void AppInterface::ToggleStatusAndTitleBar()
 	windowRect.height += upperShift;
 	backButtonNode->anchor.y -= upperShift;
 	forwardButtonNode->anchor.y -= upperShift;
+	bookmarkButtonNode->anchor.y -= upperShift;
 	addressBarNode->anchor.y -= upperShift;
+	settingsButtonNode->anchor.y -= upperShift;
 	scrollBarNode->anchor.y -= upperShift;
 	scrollBarNode->size.y += upperShift;
 	statusBarNode->anchor.y += lowerShift;
