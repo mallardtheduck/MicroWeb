@@ -371,10 +371,16 @@ void AppInterface::HandleRelease(int mouseX, int mouseY)
 
 void AppInterface::UpdateAddressBar(const URL& url)
 {
+	prevURL = addressBarURL;
 	addressBarURL = url;
 	addressBarNode->Redraw();
 
 	jumpTagName = strstr(url.url, "#");
+}
+
+const char* AppInterface::PrevURL()
+{
+	return prevURL.url;
 }
 
 void AppInterface::UpdatePageScrollBar()
@@ -428,13 +434,28 @@ void AppInterface::GenerateInterfaceNodes()
 	forwardButtonNode->anchor.y = titleNode->size.y;
 	rootInterfaceNode->AddChild(forwardButtonNode);
 
+	bookmarkButtonNode = ButtonNode::Construct(allocator, " * ", OnBookmarkButtonPressed);
+	bookmarkButtonNode->styleHandle = rootInterfaceNode->styleHandle;
+	bookmarkButtonNode->size = ButtonNode::CalculateSize(bookmarkButtonNode);
+	bookmarkButtonNode->anchor.x = forwardButtonNode->anchor.x + forwardButtonNode->size.x + 2;
+	bookmarkButtonNode->anchor.y = titleNode->size.y;
+	rootInterfaceNode->AddChild(bookmarkButtonNode);
+
+	settingsButtonNode = ButtonNode::Construct(allocator, " # ", OnSettingsButtonPressed);
+	settingsButtonNode->styleHandle = rootInterfaceNode->styleHandle;
+	settingsButtonNode->size = ButtonNode::CalculateSize(settingsButtonNode);
+
 	addressBarNode = TextFieldNode::Construct(allocator, addressBarURL.url, MAX_URL_LENGTH - 1, OnAddressBarSubmit);
 	addressBarNode->styleHandle = rootInterfaceNode->styleHandle;
-	addressBarNode->anchor.x = forwardButtonNode->anchor.x + forwardButtonNode->size.x + 2;
+	addressBarNode->anchor.x = bookmarkButtonNode->anchor.x + bookmarkButtonNode->size.x + 2;
 	addressBarNode->anchor.y = titleNode->size.y;
-	addressBarNode->size.x = Platform::video->screenWidth - addressBarNode->anchor.x - 1;
+	addressBarNode->size.x = Platform::video->screenWidth - addressBarNode->anchor.x - settingsButtonNode->size.x - 3;
 	addressBarNode->size.y = backButtonNode->size.y;
 	rootInterfaceNode->AddChild(addressBarNode);
+
+	settingsButtonNode->anchor.x = addressBarNode->anchor.x + addressBarNode->size.x + 2;
+	settingsButtonNode->anchor.y = titleNode->size.y;
+	rootInterfaceNode->AddChild(settingsButtonNode);
 
 	statusBarNode = StatusBarNode::Construct(allocator);
 	statusBarNode->size.x = Platform::video->screenWidth;
@@ -484,6 +505,7 @@ void AppInterface::DrawInterfaceNodes(DrawContext& context)
 
 void AppInterface::SetTitle(const char* title)
 {
+	strncpy(prevTitleBuffer, titleBuffer, MAX_TITLE_LENGTH);
 	strncpy(titleBuffer, title, MAX_TITLE_LENGTH);
 	titleBuffer[MAX_TITLE_LENGTH - 1] = '\0';
 	Font* font = titleNode->GetStyleFont();
@@ -500,6 +522,11 @@ void AppInterface::SetTitle(const char* title)
 	context.surface->FillRect(context, 0, titleNode->anchor.y, Platform::video->screenWidth, titleNode->size.y, fillColour);
 	titleNode->Handler().Draw(context, titleNode);
 	Platform::input->ShowMouse();
+}
+
+const char* AppInterface::PrevTitle()
+{
+	return prevTitleBuffer;
 }
 
 bool AppInterface::IsInterfaceNode(Node* node)
@@ -539,6 +566,20 @@ void AppInterface::OnBackButtonPressed(Node* node)
 void AppInterface::OnForwardButtonPressed(Node* node)
 {
 	App::Get().NextPage();
+}
+
+void AppInterface::OnBookmarkButtonPressed(Node* node)
+{
+	App& app = App::Get();
+	app.OpenURL("rsc://bookmarks");
+	app.ui.FocusNode(nullptr);
+}
+
+void AppInterface::OnSettingsButtonPressed(Node* node)
+{
+	App& app = App::Get();
+	app.OpenURL("rsc://settings");
+	app.ui.FocusNode(nullptr);
 }
 
 void AppInterface::OnAddressBarSubmit(Node* node)

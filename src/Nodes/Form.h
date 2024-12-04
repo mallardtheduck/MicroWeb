@@ -15,7 +15,8 @@ public:
 		enum MethodType
 		{
 			Get,
-			Post
+			Post,
+			Internal,
 		};
 		char* action;
 		MethodType method;
@@ -31,6 +32,8 @@ public:
 
 private:
 	static void BuildAddressParameterList(Node* node, char* address, int& numParams);
+	static void ProcessSettingsForm(Node* node);
+	static void ProcessBookmarksForm(Node* node);
 	static void AppendParameter(char* address, const char* name, const char* value, int& numParams);
 };
 

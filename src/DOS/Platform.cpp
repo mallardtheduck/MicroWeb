@@ -31,6 +31,7 @@
 VideoDriver* Platform::video = nullptr;
 InputDriver* Platform::input = nullptr;
 NetworkDriver* Platform::network = nullptr;
+PlatformConfig Platform::config;
 
 /*
 	Find6845
@@ -154,9 +155,45 @@ static int AutoDetectVideoMode()
 #include "../Node.h"
 #include <stdio.h>
 #include <ctype.h>
+#include "../ini.h"
+
+#define INI_MATCH(s, n) (strcmp(section, s) == 0 && strcmp(name, n) == 0)
+
+static int ConfigHandler(void* user, const char* section, const char* name, const char* value)
+{
+	if(INI_MATCH("video", "mode"))
+	{
+		Platform::config.vidMode = atoi(value);
+	}
+	else if(INI_MATCH("cache", "enabled"))
+	{
+		Platform::config.enableCache = (strcmp(value, "true") == 0);
+	}
+	else if(INI_MATCH("cache", "size"))
+	{
+		Platform::config.cacheSize = atoi(value);
+	}
+	else if(INI_MATCH("cache", "path"))
+	{
+		strncpy(Platform::config.cachePath, value, _MAX_PATH);
+	}
+	return 1;
+}
+
+void LoadConfig()
+{
+	Platform::config.vidMode = -1;
+	Platform::config.enableCache = false;
+	Platform::config.cacheSize = 0;
+	Platform::config.cachePath[0] = '\0';
+
+	ini_parse("config.ini", &ConfigHandler, NULL);
+}
 
 bool Platform::Init(int argc, char* argv[])
 {
+	LoadConfig();
+
 	network = new DOSNetworkDriver();
 	if (network)
 	{
@@ -164,8 +201,21 @@ bool Platform::Init(int argc, char* argv[])
 	}
 	else FatalError("Could not create network driver");
 
-	int suggestedMode = AutoDetectVideoMode();
-	VideoModeInfo* videoMode = ShowVideoModePicker(suggestedMode);
+	VideoModeInfo* videoMode = NULL;
+	if(Platform::config.vidMode < 0)
+	{
+		int suggestedMode = AutoDetectVideoMode();
+		videoMode = ShowVideoModePicker(suggestedMode);
+	}
+	else
+	{
+		for(size_t i = 0; ; ++i)
+		{
+			VideoModeInfo &mode = VideoModeList[i];
+			if(!mode.name) break;
+			if(i == Platform::config.vidMode) videoMode = &mode;
+		}
+	}
 	if (!videoMode)
 	{
 		return false;
@@ -235,5 +285,32 @@ void Platform::FatalError(const char* message, ...)
 	MemoryManager::pageBlockAllocator.Shutdown();
 
 	exit(1);
+}
+
+static void Platform::Log(const char* message, ...)
+{
+	va_list args;
+
+	FILE *f = fopen("log.txt", "a");
+
+	va_start(args, message);
+	vfprintf(f, message, args);
+	fprintf(f, "\n");
+	va_end(args);
+
+	fclose(f);
+}
+
+static void Platform::SaveConfig()
+{
+	FILE *f = fopen("config.ini", "w");
+	fprintf(f, "[video]\n");
+	fprintf(f, "mode = %d\n", Platform::config.vidMode);
+	fprintf(f, "\n");
+	fprintf(f, "[cache]\n");
+	fprintf(f, "enabled = %s\n", (Platform::config.enableCache ? "true" : "false"));
+	fprintf(f, "size = %d\n", Platform::config.cacheSize);
+	fprintf(f, "path = %s\n", Platform::config.cachePath);
+	fclose(f);
 }
 

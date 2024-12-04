@@ -41,6 +41,7 @@ HTMLParser::HTMLParser(Page& inPage)
 , textBufferSize(0)
 , parsingUnicode(false)
 , preformatted(0)
+, internalEnabled(false)
 {
 }
 
@@ -49,6 +50,7 @@ void HTMLParser::Reset()
 	parseState = ParseText;
 	textBufferSize = 0;
 	preformatted = 0;
+	internalEnabled = false;
 	SetTextEncoding(TextEncoding::UTF8);
 
 	contextStack.Reset();
@@ -412,7 +414,7 @@ void HTMLParser::FlushTextBuffer()
 					attributeStr++;
 				}
 
-				const HTMLTagHandler* tagHandler = DetermineTag(tagStr);
+				const HTMLTagHandler* tagHandler = DetermineTag(tagStr, internalEnabled);
 
 				// Special case when parsing <script> tag : just ignore all other tags until we have a closing </script>
 				if (CurrentSection() == SectionElement::Script)
@@ -1135,3 +1137,12 @@ uint8_t HTMLParser::ParseColourCode(const char* colourCode)
 	return 0;
 }
 
+void HTMLParser::EnableInternal()
+{
+	internalEnabled = true;
+}
+
+bool HTMLParser::InternalEnabled()
+{
+	return internalEnabled;
+}

@@ -17,6 +17,20 @@ const char* DataPack::datapackFilenames[] =
 	"LOWRES.DAT"
 };
 
+DataPackData::~DataPackData()
+{ 
+	free(data); 
+}
+
+size_t DataPackData::Read(size_t offset, char* buffer, size_t bytes)
+{
+	if(offset >= size) return 0;
+	size_t end = offset + bytes;
+	if(end > size) bytes = size - offset;
+	memcpy(buffer, data + offset, bytes);
+	return bytes;
+}
+
 bool DataPack::LoadPreset(DataPack::Preset preset)
 {
 	return Load(datapackFilenames[preset]);
@@ -64,6 +78,9 @@ bool DataPack::Load(const char* path)
 	monoFonts[0] = (Font*)LoadAsset(fs, header, "FCOUR1");
 	monoFonts[1] = (Font*)LoadAsset(fs, header, "FCOUR2");
 	monoFonts[2] = (Font*)LoadAsset(fs, header, "FCOUR3");
+
+	settingsPage = LoadDataAsset(fs, header, "SETTING");
+	bookmarksPage = LoadDataAsset(fs, header, "BOOKMKS");
 
 	delete[] header.entries;
 	fclose(fs);
@@ -140,7 +157,7 @@ Image* DataPack::LoadImageAsset(FILE* fs, DataPackHeader& header, const char* en
 	return nullptr;
 }
 
-void* DataPack::LoadAsset(FILE* fs, DataPackHeader& header, const char* entryName, void* buffer)
+void* DataPack::LoadAsset(FILE* fs, DataPackHeader& header, const char* entryName, void* buffer, size_t* size)
 {
 	DataPackEntry* entry = NULL;
 
@@ -172,6 +189,20 @@ void* DataPack::LoadAsset(FILE* fs, DataPackHeader& header, const char* entryNam
 
 	fread(buffer, length, 1, fs);
 
+	if(size) *size = length;
+
 	return buffer;
+}
+
+DataPackData* DataPack::LoadDataAsset(FILE* fs, DataPackHeader& header, const char* entryName)
+{
+	char* data = NULL;
+	size_t size = 0;
+	data = (char*)LoadAsset(fs, header, entryName, data, &size);
+	if(data != NULL)
+	{
+		return new DataPackData(data, size);
+	}
+	return NULL;
 }
 

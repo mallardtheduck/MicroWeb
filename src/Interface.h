@@ -36,6 +36,7 @@ public:
 
 	void DrawInterfaceNodes(DrawContext& context);
 	void UpdateAddressBar(const URL& url);
+	const char* PrevURL();
 
 	void SetStatusMessage(const char* message, StatusBarNode::StatusType type);
 	void ClearStatusMessage(StatusBarNode::StatusType type);
@@ -43,6 +44,7 @@ public:
 	void UpdatePageScrollBar();
 
 	void SetTitle(const char* title);
+	const char *PrevTitle();
 
 	bool FocusNode(Node* node);
 	Node* GetFocusedNode() { return focusedNode; }
@@ -80,7 +82,9 @@ private:
 
 	static void OnBackButtonPressed(Node* node);
 	static void OnForwardButtonPressed(Node* node);
+	static void OnBookmarkButtonPressed(Node *node);
 	static void OnAddressBarSubmit(Node* node);
+	static void OnSettingsButtonPressed(Node* node);
 	static void OnScrollBarMoved(Node* node);
 
 	App& app;
@@ -95,6 +99,8 @@ private:
 	Node* titleNode;
 	Node* backButtonNode;
 	Node* forwardButtonNode;
+	Node* bookmarkButtonNode;
+	Node* settingsButtonNode;
 	Node* statusBarNode;
 	Node* scrollBarNode;
 
@@ -102,6 +108,8 @@ private:
 	int pageHeightForDimensionScaling;
 
 	char titleBuffer[MAX_TITLE_LENGTH];
+	char prevTitleBuffer[MAX_TITLE_LENGTH];
+	URL prevURL;
 };
 
 #endif

@@ -121,6 +121,10 @@ void App::Run(int argc, char* argv[])
 				ResetPage();
 				requestedNewPage = false;
 				page.pageURL = pageLoadTask.GetURL();
+				if(pageLoadTask.type == LoadTask::ResourceFile)
+				{
+					parser.EnableInternal();
+				}
 				ui.UpdateAddressBar(page.pageURL);
 				loadTaskTargetNode = page.GetRootNode();
 				ui.SetStatusMessage("Parsing page content...", StatusBarNode::GeneralStatus);
@@ -243,6 +247,10 @@ void LoadTask::Load(const char* targetURL)
 		// Bit of a hack: try forcing http:// first
 		strcpy(url.url + 4, url.url + 5);
 	}
+	else if (strstr(url.url, "rsc://") == url.url)
+	{
+		type = LoadTask::ResourceFile;
+	}
 	else if (strstr(url.url, "://"))
 	{
 		// Will be an unsupported protocol
@@ -289,6 +297,20 @@ void LoadTask::Load(const char* targetURL)
 			debugDumpFile = fopen("dump.htm", "wb");
 		}
 	}
+	else if(type == LoadTask::ResourceFile)
+	{
+		char* name = url.url + strlen("rsc://");
+		if(strcmp(name, "settings") == 0)
+		{
+			resource.data = Assets.settingsPage;
+			resource.offset = 0;
+		}
+		else if(strcmp(name, "bookmarks") == 0)
+		{
+			resource.data = Assets.bookmarksPage;
+			resource.offset = 0;
+		}
+	}
 }
 
 void LoadTask::Stop()
@@ -314,6 +336,13 @@ void LoadTask::Stop()
 			request->Stop();
 			Platform::network->DestroyRequest(request);
 			request = nullptr;
+		}
+		break;
+	case LoadTask::ResourceFile:
+		if(resource.data)
+		{
+			resource.data = nullptr;
+			resource.offset = 0;
 		}
 		break;
 	}
@@ -343,6 +372,10 @@ bool LoadTask::HasContent()
 	else if (type == LoadTask::RemoteFile)
 	{
 		return (request && request->GetStatus() == HTTPRequest::Downloading);
+	}
+	else if (type == LoadTask::ResourceFile)
+	{
+		return resource.data && resource.offset < resource.data->GetSize();
 	}
 	return false;
 }
@@ -374,6 +407,20 @@ size_t LoadTask::GetContent(char* buffer, size_t count)
 				Stop();
 				break;
 			}
+		}
+	}
+	else if (type == LoadTask::ResourceFile)
+	{
+		if(resource.data)
+		{
+			size_t bytesRead = resource.data->Read(resource.offset, buffer, count);
+			resource.offset += bytesRead;
+			if(bytesRead == 0)
+			{
+				resource.data = NULL;
+				resource.offset = 0;
+			}
+			return bytesRead;
 		}
 	}
 	return 0;

@@ -21,6 +21,7 @@
 #include "URL.h"
 #include "Interface.h"
 #include "Render.h"
+#include "DataPack.h"
 
 #define MAX_PAGE_HISTORY_BUFFER_SIZE MAX_URL_LENGTH
 #define APP_LOAD_BUFFER_SIZE 256
@@ -42,6 +43,7 @@ struct LoadTask
 	{
 		LocalFile,
 		RemoteFile,
+		ResourceFile,
 	};
 
 	URL url;
@@ -51,6 +53,10 @@ struct LoadTask
 	{
 		FILE* fs;
 		HTTPRequest* request;
+		struct{
+			DataPackData *data;
+			size_t offset;
+		} resource;
 	};
 
 	FILE* debugDumpFile;

@@ -221,6 +221,22 @@ public:
 	virtual void Close(class HTMLParser& parser) const;
 };
 
-const HTMLTagHandler* DetermineTag(const char* str);
+class VideoModesTagHandler : public HTMLTagHandler
+{
+public:
+	VideoModesTagHandler() : HTMLTagHandler("$VIDEO_MODES") {}
+	virtual void Open(class HTMLParser& parser, char* attributeStr) const;
+	virtual void Close(class HTMLParser& parser) const;
+};
+
+class BookmarksTagHandler : public HTMLTagHandler
+{
+public:
+	BookmarksTagHandler() : HTMLTagHandler("$BOOKMARKS") {}
+	virtual void Open(class HTMLParser& parser, char* attributeStr) const;
+	virtual void Close(class HTMLParser& parser) const;
+};
+
+const HTMLTagHandler* DetermineTag(const char* str, bool internal);
 
 #endif

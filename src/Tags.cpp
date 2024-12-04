@@ -39,6 +39,9 @@
 #include "Nodes/Text.h"
 #include "Nodes/CheckBox.h"
 
+#include "VidModes.h"
+#include "Bookmarks.h"
+
 static const HTMLTagHandler* tagHandlers[] =
 {
 	new HTMLTagHandler("generic"),
@@ -94,12 +97,18 @@ static const HTMLTagHandler* tagHandlers[] =
 	NULL
 };
 
+static const HTMLTagHandler* internalTagHandlers[] = 
+{
+	new VideoModesTagHandler(),
+	new BookmarksTagHandler(),
+	NULL
+};
 
-const HTMLTagHandler* DetermineTag(const char* str)
+const HTMLTagHandler* DetermineTagFrom(const char *str, const HTMLTagHandler* handlers[])
 {
 	for(int n = 0; ; n++)
 	{
-		const HTMLTagHandler* handler = tagHandlers[n];
+		const HTMLTagHandler* handler = handlers[n];
 		if (!handler)
 		{
 			break;
@@ -109,7 +118,15 @@ const HTMLTagHandler* DetermineTag(const char* str)
 			return handler;
 		}
 	}
-	
+	return NULL;
+}
+
+const HTMLTagHandler* DetermineTag(const char* str, bool internal)
+{
+	const HTMLTagHandler* tag = DetermineTagFrom(str, tagHandlers);
+	if(!tag && internal) tag = DetermineTagFrom(str, internalTagHandlers);
+	if(tag) return tag;
+
 	static const HTMLTagHandler genericTag("generic");
 	return &genericTag;
 }
@@ -400,6 +417,32 @@ void InputTagHandler::Open(class HTMLParser& parser, char* attributeStr) const
 		if (!stricmp(attributes.Key(), "value"))
 		{
 			value = MemoryManager::pageAllocator.AllocString(attributes.Value());
+			if(parser.InternalEnabled())
+			{
+				if(strcmp(value, "$CACHE_ENABLED") == 0)
+				{
+					checked = Platform::config.enableCache;
+				}
+				else if(strcmp(value, "$CACHE_SIZE") == 0)
+				{
+					char buffer[16];
+					sprintf(buffer, "%d", Platform::config.cacheSize);
+					value = MemoryManager::pageAllocator.AllocString(buffer);
+				}
+				else if(strcmp(value, "$CACHE_PATH") == 0)
+				{
+					value = MemoryManager::pageAllocator.AllocString(Platform::config.cachePath);
+				}
+				else if(strcmp(value, "$PREV_TITLE") == 0)
+				{
+					value = MemoryManager::pageAllocator.AllocString(App::Get().ui.PrevTitle());
+				}
+				else if(strcmp(value, "$PREV_URL") == 0)
+				{
+					const char* prevURL = App::Get().ui.PrevURL();
+					value =MemoryManager::pageAllocator.AllocString(prevURL ? prevURL : "");
+				}
+			}
 		}
 		if (!stricmp(attributes.Key(), "name"))
 		{
@@ -473,6 +516,10 @@ void FormTagHandler::Open(class HTMLParser& parser, char* attributeStr) const
 				if (!stricmp(attributes.Value(), "post"))
 				{
 					formData->method = FormNode::Data::Post;
+				}
+				else if(parser.InternalEnabled() && strcmp(attributes.Value(), "$INTERNAL") == 0)
+				{
+					formData->method = FormNode::Data::Internal;
 				}
 			}
 		}
@@ -715,6 +762,11 @@ void OptionTagHandler::Open(class HTMLParser& parser, char* attributeStr) const
 					selectData->selected = optionData;
 				}
 			}
+			else if(!stricmp(attributes.Key(), "value"))
+			{
+				OptionNode::Data* optionData = static_cast<OptionNode::Data*>(optionNode->data);
+				optionData->value = MemoryManager::pageAllocator.AllocString(attributes.Value());
+			}
 		}
 	}
 }
@@ -724,3 +776,68 @@ void OptionTagHandler::Close(class HTMLParser& parser) const
 	parser.PopContext(this);
 }
 
+void VideoModesTagHandler::Open(class HTMLParser& parser, char* attributeStr) const
+{
+	parser.Write("<p></p>\n");
+	parser.Write("<select name=\"video_mode\">\n");
+	parser.Write("<option value=\"-1\">Prompt at startup</option>\n");
+	char numbuf[16];
+	int modeIndex = Platform::config.vidMode;
+	for(size_t i = 0; ; ++i)
+	{
+		VideoModeInfo *mode = &VideoModeList[i];
+		if(mode->name == NULL) break;
+
+		sprintf(numbuf, "%d", i);
+		parser.Write("<option value=\"");
+		parser.Write(numbuf);
+		parser.Write("\"");
+		if(modeIndex == i)
+		{
+			parser.Write(" selected ");
+		}
+		parser.Write(">");
+		parser.Write(mode->name);
+		parser.Write("</option>\n");
+	}
+	parser.Write("</select>\n");
+}
+
+void VideoModesTagHandler::Close(class HTMLParser& parser) const
+{
+}
+
+void BookmarksTagHandler::Open(class HTMLParser& parser, char* attributeStr) const
+{
+	BookmarkListPtr list(GetBookmarks());
+	size_t count = list->Count();
+	parser.Write("<p></p>\n");
+	parser.Write("<table><thead><tr><th>Select</th><th>Bookmark</th></tr></thead><tbody>\n");
+	if(count == 0)
+	{
+		parser.Write("<tr><td> -- No Bookmarks -- </td><td></td></tr>\n");
+	}
+	else
+	{
+		for(size_t i = 0; i < count; ++i)
+		{
+			const Bookmark& b = (*list)[i];
+			char buffer[16];
+			sprintf(buffer, "%d", i);
+
+			parser.Write("<tr><td><input type=\"radio\" name=\"delete\" value=\"");
+			parser.Write(buffer);
+			parser.Write("\"></td><td><a href=\"");
+			parser.Write(b.url);
+			parser.Write("\">");
+			parser.Write(b.title);
+			parser.Write("</a></td></tr>\n");
+		}
+	}
+	parser.Write("</tbody></table>\n");
+	delete list;
+}
+
+void BookmarksTagHandler::Close(class HTMLParser& parser) const
+{
+}

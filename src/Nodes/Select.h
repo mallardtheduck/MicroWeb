@@ -9,9 +9,10 @@ public:
 	class Data
 	{
 	public:
-		Data() : node(nullptr), text(nullptr), next(nullptr), addedToSelectNode(false) {}
+		Data() : node(nullptr), text(nullptr), value(nullptr), next(nullptr), addedToSelectNode(false) {}
 		Node* node;
 		const char* text;
+		const char* value;
 		Data* next;
 		bool addedToSelectNode;
 	};

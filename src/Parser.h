@@ -95,6 +95,9 @@ public:
 	void Finish();
 	bool IsFinished() { return parseState == ParseFinished; }
 
+	void EnableInternal();
+	bool InternalEnabled();
+
 private:
 	void ParseChar(char c);
 
@@ -130,6 +133,8 @@ private:
 	TextEncoding::Type textEncoding;
 
 	unsigned int preformatted;
+
+	bool internalEnabled;
 };
 
 #endif

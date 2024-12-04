@@ -50,6 +50,21 @@ struct DataPackHeader
 	DataPackEntry* entries;
 };
 
+class DataPackData
+{
+	private:
+		char* data;
+		size_t size;
+	
+	public:
+		DataPackData(char* d, size_t s) : data(d), size(s) {}
+		~DataPackData();
+
+		size_t GetSize() { return size; }
+
+		size_t Read(size_t offset, char* buffer, size_t bytes);
+};
+
 struct DataPack
 {
 	enum Preset
@@ -75,14 +90,18 @@ struct DataPack
 	Font* fonts[NUM_FONT_SIZES];
 	Font* monoFonts[NUM_FONT_SIZES];
 
+	DataPackData* settingsPage;
+	DataPackData* bookmarksPage;
+
 	bool LoadPreset(Preset preset);
 	bool Load(const char* path);
 	Font* GetFont(int fontSize, FontStyle::Type fontStyle);
 	MouseCursorData* GetMouseCursorData(MouseCursor::Type type);
 
 private:
-	void* LoadAsset(FILE* fs, DataPackHeader& header, const char* entryName, void* buffer = NULL);
+	void* LoadAsset(FILE* fs, DataPackHeader& header, const char* entryName, void* buffer = NULL, size_t* size = NULL);
 	Image* LoadImageAsset(FILE* fs, DataPackHeader& header, const char* entryName);
+	DataPackData* LoadDataAsset(FILE* fs,  DataPackHeader& header, const char* entryName);
 	int FontSizeToIndex(int fontSize);
 	static const char* datapackFilenames[];
 };

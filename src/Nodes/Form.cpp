@@ -6,6 +6,8 @@
 #include "CheckBox.h"
 #include "Select.h"
 
+#include "../Bookmarks.h"
+
 Node* FormNode::Construct(Allocator& allocator)
 {
 	FormNode::Data* data = allocator.Alloc<FormNode::Data>();
@@ -115,6 +117,107 @@ void FormNode::SubmitForm(Node* node)
 		}
 
 		app.OpenURL(URL::GenerateFromRelative(app.page.pageURL.url, address).url);
+	}
+	else if(data->method == FormNode::Data::Internal)
+	{
+		char* address = app.ui.addressBarURL.url;
+		if(strstr(address, "settings"))
+		{
+			ProcessSettingsForm(node);
+			Platform::SaveConfig();
+		}
+		else if(strstr(address, "bookmarks"))
+		{
+			ProcessBookmarksForm(node);
+		}
+		app.ReloadPage();
+	}
+}
+
+void FormNode::ProcessSettingsForm(Node* node)
+{
+	switch(node->type)
+	{
+		case Node::TextField:
+		{
+			TextFieldNode::Data* fieldData = static_cast<TextFieldNode::Data*>(node->data);
+			if(strcmp(fieldData->name, "cache_size") == 0)
+			{
+				Platform::config.cacheSize = atoi(fieldData->buffer);
+			}
+			else if(strcmp(fieldData->name, "cache_path") == 0)
+			{
+				strncpy(Platform::config.cachePath, fieldData->buffer, _MAX_PATH);
+			}
+			break;
+		}
+		case Node::CheckBox:
+		{
+			CheckBoxNode::Data* checkboxData = static_cast<CheckBoxNode::Data*>(node->data);
+			if(strcmp(checkboxData->name, "cache_enabled") == 0)
+			{
+				Platform::config.enableCache = checkboxData->isChecked;
+			}
+			break;
+		}
+		case Node::Select:{
+			SelectNode::Data* selectData = static_cast<SelectNode::Data*>(node->data);
+			if(strcmp(selectData->name, "video_mode") == 0)
+			{
+				Platform::config.vidMode = atoi(selectData->selected->value);
+			}
+			break;
+		}
+	}
+
+	for (Node* childNode = node->firstChild; childNode; childNode = childNode->next)
+	{
+		ProcessSettingsForm(childNode);
+	}
+}
+
+void FormNode::ProcessBookmarksForm(Node* node)
+{
+	static const char* bookmarkTitle = NULL;
+	static const char* bookmarkUrl = NULL;
+
+	switch(node->type)
+	{
+		case Node::TextField:
+		{
+			TextFieldNode::Data* fieldData = static_cast<TextFieldNode::Data*>(node->data);
+			if(strcmp(fieldData->name, "bookmark_title") == 0)
+			{
+				bookmarkTitle = fieldData->buffer;
+			}
+			else if(strcmp(fieldData->name, "bookmark_url") == 0)
+			{
+				bookmarkUrl = fieldData->buffer;
+			}
+			break;
+		}
+		case Node::CheckBox:
+		{
+			CheckBoxNode::Data* checkboxData = static_cast<CheckBoxNode::Data*>(node->data);
+			if(checkboxData->isChecked && strcmp(checkboxData->name, "delete") == 0)
+			{
+				int index = atoi(checkboxData->value);
+				DeleteBookmark(index);
+			}
+			break;
+		}
+	}
+
+	if(bookmarkTitle && bookmarkUrl)
+	{
+		AddBookmark(bookmarkTitle, bookmarkUrl);
+		bookmarkTitle = NULL;
+		bookmarkUrl = NULL;
+	}
+
+	for (Node* childNode = node->firstChild; childNode; childNode = childNode->next)
+	{
+		ProcessBookmarksForm(childNode);
 	}
 }
 

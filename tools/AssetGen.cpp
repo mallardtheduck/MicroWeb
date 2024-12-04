@@ -41,6 +41,21 @@ void AddEntryHeader(const char* name, vector<DataPackEntry>& entries, vector<uin
 	entries.push_back(entry);
 }
 
+void AddData(const char* filename, vector<uint8_t>& output)
+{
+	char basePath[256];
+	snprintf(basePath, 256, "assets/Data/%s", filename);
+
+	FILE* f;
+	fopen_s(&f, basePath, "rb");
+	while (!feof(f)) 
+	{
+		char c = fgetc(f);
+		output.push_back(c);
+	}
+	fclose(f);
+}
+
 void GenerateAssetPack(const char* name)
 {
 	char basePath[256];
@@ -98,6 +113,11 @@ void GenerateAssetPack(const char* name)
 	EncodeImage(basePath, "radio-selected.png", data);
 	AddEntryHeader("IDOWN", entries, data);
 	EncodeImage(basePath, "down-icon.png", data);
+
+	AddEntryHeader("SETTING", entries, data);
+	AddData("settings.html", data);
+	AddEntryHeader("BOOKMKS", entries, data);
+	AddData("bookmarks.html", data);
 
 	AddEntryHeader("END", entries, data);
 

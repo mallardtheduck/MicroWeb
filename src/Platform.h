@@ -24,6 +24,15 @@ struct Image;
 class DrawSurface;
 struct VideoModeInfo;
 
+struct PlatformConfig
+{
+	int vidMode;
+
+	bool enableCache;
+	int cacheSize;
+	char cachePath[_MAX_PATH];
+};
+
 class VideoDriver
 {
 public:
@@ -106,10 +115,15 @@ public:
 	static void Update();
 
 	static void FatalError(const char* message, ...);
+	static void Log(const char* message, ...);
+
+	static void SaveConfig();
 
 	static VideoDriver* video;
 	static NetworkDriver* network;
 	static InputDriver* input;
+
+	static PlatformConfig config;
 };
 
 #endif
