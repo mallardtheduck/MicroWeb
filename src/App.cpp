@@ -169,6 +169,10 @@ void App::Run(int argc, char* argv[])
 						ShowNoHTTPSPage();
 						requestedNewPage = false;
 					}
+					else if (pageLoadTask.request->GetStatus() == HTTPRequest::Connecting)
+					{
+						ui.SetStatusMessage(pageLoadTask.request->GetStatusString(), StatusBarNode::GeneralStatus);
+					}
 				}
 				else if (pageLoadTask.type == LoadTask::LocalFile)
 				{
