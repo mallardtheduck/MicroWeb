@@ -1,8 +1,10 @@
 #include "Bookmarks.h"
 #include <string.h>
 #include <malloc.h>
+#include "Platform.h"
 
-const char* BookmarksFile = "bookmark.ini";
+const char* const bookmarksFile = "bookmark.ini";
+static char bookmarksPath[_MAX_PATH];
 
 Bookmark::Bookmark(size_t i, const char* t, const char* u)
 {
@@ -68,25 +70,43 @@ BookmarkListPtr GetBookmarks()
 	ctx.count = 0;
 	ctx.array = (Bookmark**)malloc(0);
 
-	ini_parse(BookmarksFile, &BookmarksLoadHandler, &ctx);
+	snprintf(bookmarksPath, _MAX_PATH, "%s\\%s", Platform::InstallPath(), bookmarksFile);
+	ini_parse(bookmarksPath, &BookmarksLoadHandler, &ctx);
 
 	BookmarkListPtr retval(new BookmarkList(ctx.array, ctx.count));
 	return retval;
 }
 
+static char* FilterTitle(const char* originalTitle)
+{
+	static const char* const disallowedChars = "=:<>";
+
+	char* newTitle = strdup(originalTitle);
+	for(char *c = newTitle; c && *c; ++c)
+	{
+		if(strchr(disallowedChars, *c)) *c = ' ';
+	}
+	return newTitle;
+}
+
 static void WriteBookmarks(const BookmarkList& list, int skip, const char* addTitle, const char* addUrl)
 {
-	FILE *f = fopen(BookmarksFile, "w");
+	snprintf(bookmarksPath, _MAX_PATH, "%s\\%s", Platform::InstallPath(), bookmarksFile);
+	FILE *f = fopen(bookmarksPath, "w");
 	fprintf(f, "[bookmarks]\n");
 	size_t count = list.Count();
 	for(size_t i = 0; i < count; ++i)
 	{
 		if(i == skip) continue;
-		fprintf(f, "%s = %s\n", list[i].title, list[i].url);
+		char* newTitle = FilterTitle(list[i].title);
+		fprintf(f, "%s = %s\n", newTitle, list[i].url);
+		free(newTitle);
 	}
 	if(addTitle && addUrl)
 	{
-		fprintf(f, "%s = %s\n", addTitle, addUrl);
+		char* newTitle = FilterTitle(addTitle);
+		fprintf(f, "%s = %s\n", newTitle, addUrl);
+		free(newTitle);
 	}
 	fclose(f);
 }

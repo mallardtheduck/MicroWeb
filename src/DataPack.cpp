@@ -17,6 +17,8 @@ const char* DataPack::datapackFilenames[] =
 	"LOWRES.DAT"
 };
 
+static char dataPackPath[_MAX_PATH];
+
 DataPackData::~DataPackData()
 { 
 	free(data); 
@@ -33,7 +35,8 @@ size_t DataPackData::Read(size_t offset, char* buffer, size_t bytes)
 
 bool DataPack::LoadPreset(DataPack::Preset preset)
 {
-	return Load(datapackFilenames[preset]);
+	snprintf(dataPackPath, _MAX_PATH, "%s\\%s", Platform::InstallPath(), datapackFilenames[preset]);
+	return Load(dataPackPath);
 }
 
 

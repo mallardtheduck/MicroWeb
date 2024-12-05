@@ -28,10 +28,15 @@
 #include "../Memory/Memory.h"
 #include "../App.h"
 
+const char* const configFile = "microweb.ini";
+
 VideoDriver* Platform::video = nullptr;
 InputDriver* Platform::input = nullptr;
 NetworkDriver* Platform::network = nullptr;
 PlatformConfig Platform::config;
+
+static char* installPath = NULL;
+static char configPath[_MAX_PATH];
 
 /*
 	Find6845
@@ -157,6 +162,8 @@ static int AutoDetectVideoMode()
 #include <ctype.h>
 #include "../ini.h"
 
+#include <libgen.h>
+
 #define INI_MATCH(s, n) (strcmp(section, s) == 0 && strcmp(name, n) == 0)
 
 static int ConfigHandler(void* user, const char* section, const char* name, const char* value)
@@ -185,13 +192,16 @@ void LoadConfig()
 	Platform::config.vidMode = -1;
 	Platform::config.enableCache = false;
 	Platform::config.cacheSize = 0;
-	Platform::config.cachePath[0] = '\0';
+	strcpy(Platform::config.cachePath, "cache");
 
-	ini_parse("config.ini", &ConfigHandler, NULL);
+	ini_parse(configPath, &ConfigHandler, NULL);
 }
 
 bool Platform::Init(int argc, char* argv[])
 {
+	installPath = strdup(dirname(argv[0]));
+	snprintf(configPath, _MAX_PATH, "%s\\%s", installPath, configFile);
+
 	LoadConfig();
 
 	network = new DOSNetworkDriver();
@@ -303,7 +313,7 @@ static void Platform::Log(const char* message, ...)
 
 static void Platform::SaveConfig()
 {
-	FILE *f = fopen("config.ini", "w");
+	FILE *f = fopen(configPath, "w");
 	fprintf(f, "[video]\n");
 	fprintf(f, "mode = %d\n", Platform::config.vidMode);
 	fprintf(f, "\n");
@@ -312,5 +322,10 @@ static void Platform::SaveConfig()
 	fprintf(f, "size = %d\n", Platform::config.cacheSize);
 	fprintf(f, "path = %s\n", Platform::config.cachePath);
 	fclose(f);
+}
+
+const char* Platform::InstallPath()
+{
+	return installPath;
 }
 

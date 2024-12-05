@@ -118,6 +118,7 @@ public:
 	static void Log(const char* message, ...);
 
 	static void SaveConfig();
+	static const char* InstallPath();
 
 	static VideoDriver* video;
 	static NetworkDriver* network;
