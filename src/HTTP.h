@@ -19,6 +19,9 @@
 #define HTTP_RESPONSE_TIMEOUT_SECONDS 20
 #define HTTP_RESPONSE_TIMEOUT (HTTP_RESPONSE_TIMEOUT_SECONDS * CLOCKS_PER_SEC)
 
+//Uses some of the above constants
+#include "Cache.h"
+
 class HTTPRequest
 {
 public:
@@ -102,6 +105,9 @@ private:
 	bool usingChunkedTransfer;
 	
 	clock_t timeout;
+
+	CacheInfo cacheInfo;
+	CacheWriter* cacheWriter;
 };
 
 

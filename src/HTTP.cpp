@@ -182,6 +182,13 @@ size_t HTTPRequest::ReadData(char* buffer, size_t count)
 				contentRemaining -= bytesRead;
 				if (contentRemaining <= 0)
 				{
+					if(cacheWriter)
+					{
+						cacheWriter->Write(buffer, bytesRead);
+						cacheWriter->Finish();
+						delete cacheWriter;
+						cacheWriter = NULL;
+					}
 					Stop();
 					return bytesRead;
 				}
@@ -195,6 +202,8 @@ size_t HTTPRequest::ReadData(char* buffer, size_t count)
 					internalStatus = ParseChunkHeader;
 				}
 			}
+
+			if(cacheWriter) cacheWriter->Write(buffer, bytesRead);
 
 			return bytesRead;
 		}
@@ -210,6 +219,12 @@ void HTTPRequest::Stop()
 		Platform::network->DestroySocket(sock);
 		sock = NULL;
 	}
+	if(cacheWriter)
+	{
+		cacheWriter->Abort();
+		delete cacheWriter;
+		cacheWriter = NULL;
+	}
 	status = HTTPRequest::Stopped;
 }
 
@@ -217,6 +232,7 @@ void HTTPRequest::MarkError(InternalStatus statusError)
 {
 	status = HTTPRequest::Error;
 	internalStatus = statusError;
+	if(cacheWriter) cacheWriter->Abort();
 }
 
 void HTTPRequest::Update()
@@ -349,6 +365,8 @@ void HTTPRequest::Update()
 		{
 			if (ReadLine())
 			{
+				Platform::Log(lineBuffer);
+				cacheInfo.ParseHeader(lineBuffer);
 				if (lineBuffer[0] == '\0')
 				{
 					if (contentRemaining == 0)
@@ -367,6 +385,15 @@ void HTTPRequest::Update()
 						{
 							status = Downloading;
 							internalStatus = ReceiveContent;
+							if(cacheInfo.ShouldCache())
+							{
+								Platform::Log("URL will be cached: %s (expiry: %li)", url.url, cacheInfo.expiry);
+								cacheWriter = Cache::GetCache().Put(url.url, cacheInfo.expiry, contentType);
+							}
+							else
+							{
+								Platform::Log("URL will NOT be cached: %s", url.url);
+							}
 						}
 					}
 					break;
