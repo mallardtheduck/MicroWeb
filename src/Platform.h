@@ -31,6 +31,8 @@ struct PlatformConfig
 	bool enableCache;
 	int cacheSize;
 	char cachePath[_MAX_PATH];
+
+	bool enableLog;
 };
 
 class VideoDriver

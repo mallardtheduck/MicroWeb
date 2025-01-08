@@ -202,6 +202,8 @@ bool Platform::Init(int argc, char* argv[])
 	installPath = strdup(dirname(argv[0]));
 	snprintf(configPath, _MAX_PATH, "%s\\%s", installPath, configFile);
 
+	config.enableLog = false;
+
 	LoadConfig();
 
 	network = new DOSNetworkDriver();
@@ -299,6 +301,8 @@ void Platform::FatalError(const char* message, ...)
 
 static void Platform::Log(const char* message, ...)
 {
+	if(!config.enableLog) return;
+
 	va_list args;
 
 	FILE *f = fopen("log.txt", "a");

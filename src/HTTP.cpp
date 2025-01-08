@@ -13,6 +13,7 @@ void HTTPRequest::Reset()
 	lineBufferSize = 0;
 	lineBufferSendPos = -1;
 	contentType[0] = '\0';
+	cacheInfo = CacheInfo();
 }
 
 void HTTPRequest::WriteLine(const char* fmt, ...)
@@ -385,7 +386,7 @@ void HTTPRequest::Update()
 						{
 							status = Downloading;
 							internalStatus = ReceiveContent;
-							if(cacheInfo.ShouldCache())
+							if(Platform::config.enableCache && cacheInfo.ShouldCache(url.url))
 							{
 								Platform::Log("URL will be cached: %s (expiry: %li)", url.url, cacheInfo.expiry);
 								cacheWriter = Cache::GetCache().Put(url.url, cacheInfo.expiry, contentType);

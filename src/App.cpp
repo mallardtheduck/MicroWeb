@@ -86,6 +86,10 @@ void App::Run(int argc, char* argv[])
 			{
 				config.useEMS = false;
 			}
+			else if (!stricmp(argv[n], "-log"))
+			{
+				Platform::config.enableLog = true;
+			}
 		}
 	}
 
@@ -210,6 +214,7 @@ void App::Run(int argc, char* argv[])
 				{
 					if (MemoryManager::pageAllocator.GetError())
 					{
+						Platform::Log("Out of memory when loading page");
 						page.GetApp().ui.SetStatusMessage("Out of memory when loading page", StatusBarNode::GeneralStatus);
 					}
 					else
@@ -294,11 +299,25 @@ void LoadTask::Load(const char* targetURL)
 
 	if (type == LoadTask::RemoteFile)
 	{
-		request = Platform::network->CreateRequest(url.url);
-
-		if (App::config.dumpPage && this == &App::Get().pageLoadTask)
+		FILE* fromCache = NULL;
+		if(Platform::config.enableCache)
 		{
-			debugDumpFile = fopen("dump.htm", "wb");
+			fromCache = Cache::GetCache().Get(url.url, NULL, NULL);
+		}
+		if(fromCache)
+		{
+			Platform::Log("Found in cache: %s\n", url.url);
+			type = LoadTask::LocalFile;
+			fs = fromCache;
+		}
+		else
+		{
+			request = Platform::network->CreateRequest(url.url);
+
+			if (App::config.dumpPage && this == &App::Get().pageLoadTask)
+			{
+				debugDumpFile = fopen("dump.htm", "wb");
+			}
 		}
 	}
 	else if(type == LoadTask::ResourceFile)

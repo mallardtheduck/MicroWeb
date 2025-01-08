@@ -26,8 +26,19 @@ struct CacheEntry
 	long expiry;
 	char *contentType;
 
-	CacheEntry() : id(0), url(NULL), expiry(0), contentType(NULL) {}
-	CacheEntry(int i, const char* u, long e, const char* c) : id(i), url(strdup(u)), expiry(e), contentType(strdup(c)) {}
+	long cachedAt;
+	int uses;
+
+	CacheEntry() : 
+		id(0), url(NULL), expiry(0), contentType(NULL), cachedAt(-1), uses(0) 
+	{}
+	CacheEntry(int i, const char* u, long e, const char* c) : 
+		id(i), url(strdup(u)), expiry(e), contentType(strdup(c)), cachedAt(-1), uses(0) 
+	{}
+
+	CacheEntry(const CacheEntry& other) :
+		id(other.id), url(strdup(other.url)), expiry(other.expiry), contentType(strdup(other.contentType)), cachedAt(other.cachedAt), uses(other.uses)
+	{}
 
 	~CacheEntry()
 	{
@@ -76,6 +87,8 @@ void Cache::WriteCache()
 		fprintf(f, "url = %s\n", entries[i]->url);
 		fprintf(f, "expiry = %li\n", entries[i]->expiry);
 		fprintf(f, "content-type = %s\n", entries[i]->contentType);
+		fprintf(f, "cached-at = %li\n", entries[i]->cachedAt);
+		fprintf(f, "uses = %i\n", entries[i]->uses);
 		fprintf(f, "\n");
 	}
 	fclose(f);
@@ -94,7 +107,30 @@ CacheEntry *Cache::AddEntry(int id, char *url, long expiry, char *contentType)
 
 	++cacheEntryCount;
 	entries = (CacheEntry**)realloc((void*)entries, cacheEntryCount * sizeof(CacheEntry*));
-	entries[cacheEntryCount - 1] = new CacheEntry(id, url, expiry, contentType);
+	CacheEntry* entry = new CacheEntry(id, url, expiry, contentType);
+	entry->cachedAt = time(NULL);
+	entries[cacheEntryCount - 1] = entry;
+	return entries[cacheEntryCount - 1];
+}
+
+
+CacheEntry *Cache::AddEntry(const CacheEntry* entry)
+{
+	CacheEntry *newEntry = new CacheEntry(*entry);
+	if(newEntry->id < 0) newEntry->id = GetFreeId();
+	else
+	{
+		for(size_t i = 0; i < cacheEntryCount; ++i)
+		{
+			if(entries[i]->id == newEntry->id) return entries[i];
+		}
+	}
+
+	if(newEntry->cachedAt < 0) newEntry->cachedAt = time(NULL);
+
+	++cacheEntryCount;
+	entries = (CacheEntry**)realloc((void*)entries, cacheEntryCount * sizeof(CacheEntry*));
+	entries[cacheEntryCount - 1] = newEntry;
 	return entries[cacheEntryCount - 1];
 }
 
@@ -117,6 +153,50 @@ void Cache::RemoveEntry(int id)
 	remove(cacheDataPath);
 }
 
+
+off_t Cache::CalculateCacheSize()
+{
+	off_t size = 0;
+	for(size_t i = 0; i < cacheEntryCount; ++i)
+	{
+		CacheEntry* entry = entries[i];
+		char cacheDataPath[_MAX_PATH];
+		snprintf(cacheDataPath, _MAX_PATH, "%s\\%s\\%i.dat", Platform::InstallPath(), Platform::config.cachePath, entry->id);
+		struct stat info;
+		stat(cacheDataPath, &info);
+		size += info.st_size;
+	}
+	Platform::Log("Cache size: %lu", size);
+	return size;
+}
+
+CacheEntry* Cache::LeastUsed()
+{
+	long now = time(NULL);
+
+	CacheEntry* leastUsed = NULL;
+	int tbu = 0;
+	for(size_t i = 0; i < cacheEntryCount; ++i)
+	{
+		CacheEntry* entry = entries[i];
+		int entryTbu = -1;
+		if(entry->uses > 0)
+		{
+			entryTbu = (now - entry->cachedAt) / entry->uses;
+		}
+		else
+		{
+			entryTbu = INT_MAX;
+		}
+		if(!leastUsed || entryTbu > tbu || (entryTbu == tbu && entry->cachedAt < leastUsed->cachedAt))
+		{
+			leastUsed = entry;
+			tbu = entryTbu;
+		}
+	}
+	return leastUsed;
+}
+
 int Cache::CacheLoadHandler(void* user, const char* section, const char* name, const char* value)
 {
 	Cache *that = (Cache*)user;
@@ -128,7 +208,7 @@ int Cache::CacheLoadHandler(void* user, const char* section, const char* name, c
 	}
 	else if(id != that->loadEntry->id)
 	{
-		that->AddEntry(that->loadEntry->id, that->loadEntry->url, that->loadEntry->expiry, that->loadEntry->contentType);
+		that->AddEntry(that->loadEntry);
 		delete that->loadEntry;
 		that->loadEntry = new CacheEntry();
 		that->loadEntry->id = id;
@@ -146,12 +226,21 @@ int Cache::CacheLoadHandler(void* user, const char* section, const char* name, c
 	{
 		that->loadEntry->contentType = strdup(value);
 	}
+	else if(strcmp(name, "cached-at") == 0)
+	{
+		that->loadEntry->cachedAt = atol(value);
+	}
+	else if(strcmp(name, "uses") == 0)
+	{
+		that->loadEntry->uses = atoi(value);
+	}
 
 	return 1;
 }
 
 Cache::Cache() : entries((CacheEntry**)malloc(0)), cacheEntryCount(0) 
 {
+	ReadCache();
 	Prune();
 }
 
@@ -170,6 +259,8 @@ FILE* Cache::Get(const char* url, time_t* expiry, char** contentType)
 		if(strcmp(entries[i]->url, url) == 0)
 		{
 			entry = entries[i];
+			++entry->uses;
+			WriteCache();
 			break;
 		}
 	}
@@ -177,8 +268,8 @@ FILE* Cache::Get(const char* url, time_t* expiry, char** contentType)
 
 	char cacheDataPath[_MAX_PATH];
 	snprintf(cacheDataPath, _MAX_PATH, "%s\\%s\\%i.dat", Platform::InstallPath(), Platform::config.cachePath, entry->id);
-	*expiry = entry->expiry;
-	*contentType = entry->contentType;
+	if(expiry) *expiry = entry->expiry;
+	if(contentType) *contentType = entry->contentType;
 	return fopen(cacheDataPath, "rb");
 }
 
@@ -204,6 +295,13 @@ void Cache::Prune()
 				break;
 			}
 		}
+	}
+	off_t maxCacheSize = ((off_t)Platform::config.cacheSize) * 1048576;
+	Platform::Log("Max cache size: %lu", maxCacheSize);
+	while(CalculateCacheSize() > maxCacheSize)
+	{
+		CacheEntry* leastUsed = LeastUsed();
+		if(leastUsed) RemoveEntry(leastUsed->id);
 	}
 	WriteCache();
 }
@@ -301,14 +399,19 @@ void CacheInfo::ParseHeader(const char* header)
 		cacheControlFound = true;
 		Platform::Log("Cache-control header: %s", header);
 		ProcessCacheControl(header, *this);
-		Platform::Log("  Cacheable? %s", (cacheable ? "Yes" : "No"));
+		Platform::Log("  Cacheable: %s", (cacheable ? "Yes" : "No"));
 		Platform::Log("  Expiry: %li", expiry - time(NULL));
 	}
 }
 
-bool CacheInfo::ShouldCache()
+bool CacheInfo::ShouldCache(const char* url)
 {
-	return cacheable && (expiry > time(NULL) + MinimumCacheTime);
+	bool urlCheck = strstr(url, "?");
+	Platform::Log("Cache candidate summary: ");
+	Platform::Log("  Cacheable: %s", (cacheable ? "Yes" : "No"));
+	Platform::Log("  Expiry: %li (%li)", expiry, expiry - time(NULL));
+	Platform::Log("  URL Check: %s", (urlCheck ? "Failed" : "Passed"));
+	return cacheable && !urlCheck && (expiry > time(NULL) + MinimumCacheTime);
 }
 
 CacheWriter::CacheWriter(CacheEntry *e) : entry(e)

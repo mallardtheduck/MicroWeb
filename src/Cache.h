@@ -4,6 +4,7 @@
 
 #include <time.h>
 #include <stdio.h>
+#include <sys/stat.h>
 
 struct CacheEntry;
 
@@ -17,7 +18,7 @@ struct CacheInfo
 	CacheInfo();
 	void ParseHeader(const char* header);
 
-	bool ShouldCache();
+	bool ShouldCache(const char* url);
 };
 
 class CacheWriter
@@ -49,7 +50,11 @@ class Cache
 		void ReadCache();
 		void WriteCache();
 		CacheEntry* AddEntry(int id, char *url, long expiry, char *contentType);
+		CacheEntry* AddEntry(const CacheEntry* entry);
 		void RemoveEntry(int id);
+
+		off_t CalculateCacheSize();
+		CacheEntry* LeastUsed();
 
 		static int CacheLoadHandler(void* user, const char* section, const char* name, const char* value);
 	public:
