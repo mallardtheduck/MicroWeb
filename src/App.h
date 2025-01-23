@@ -30,7 +30,7 @@ class HTTPRequest;
 
 struct LoadTask
 {
-	LoadTask() : type(LocalFile), fs(NULL), debugDumpFile(NULL) {}
+	LoadTask() : type(LocalFile), fs(NULL), debugDumpFile(NULL), contentType(NULL) {}
 
 	void Load(const char* url);
 	void Stop();
@@ -38,6 +38,7 @@ struct LoadTask
 	bool IsBusy();
 	size_t GetContent(char* buffer, size_t count);
 	const char* GetURL();
+	const char* GetContentType();
 
 	enum Type
 	{
@@ -60,6 +61,7 @@ struct LoadTask
 	};
 
 	FILE* debugDumpFile;
+	char* contentType;
 };
 
 struct Widget;

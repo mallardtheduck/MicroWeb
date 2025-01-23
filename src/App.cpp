@@ -302,7 +302,7 @@ void LoadTask::Load(const char* targetURL)
 		FILE* fromCache = NULL;
 		if(Platform::config.enableCache)
 		{
-			fromCache = Cache::GetCache().Get(url.url, NULL, NULL);
+			fromCache = Cache::GetCache().Get(url.url, NULL, &contentType);
 		}
 		if(fromCache)
 		{
@@ -351,6 +351,7 @@ void LoadTask::Stop()
 		{
 			fclose(fs);
 			fs = nullptr;
+			contentType = nullptr;
 		}
 		break;
 	case LoadTask::RemoteFile:
@@ -378,6 +379,20 @@ const char* LoadTask::GetURL()
 		return request->GetURL();
 	}
 	return url.url;
+}
+
+const char* LoadTask::GetContentType()
+{
+	if(type == LoadTask::LocalFile)
+	{
+		//Only for cache
+		return contentType;
+	}
+	else if(type == LoadTask::RemoteFile && request)
+	{
+		return request->GetContentType();
+	}
+	return nullptr;
 }
 
 bool LoadTask::IsBusy()

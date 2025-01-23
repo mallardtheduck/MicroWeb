@@ -137,6 +137,7 @@ void ImageNode::LoadContent(Node* node, LoadTask& loadTask)
 
 		if (!data->source)
 		{
+			Platform::Log("IMG without source!");
 			ImageLoadError(node);
 		}
 		else 
@@ -162,6 +163,7 @@ void ImageNode::FinishContent(Node* node, struct LoadTask& loadTask)
 		case ImageNode::DownloadingDimensions:
 		case ImageNode::DownloadingContent:
 		case ImageNode::DeterminingFormat:
+			Platform::Log("Image download failed: %s (%i)", data->source, data->state);
 			ImageLoadError(node);
 			break;
 		}
@@ -203,8 +205,8 @@ bool ImageNode::ParseContent(Node* node, char* buffer, size_t count)
 		bool loadDimensionsOnly = !data->HasDimensions();
 		LoadTask& loadTask = App::Get().pageContentLoadTask;
 		
-		if((loadTask.type == LoadTask::RemoteFile && ImageDecoder::CreateFromMIME(loadTask.request->GetContentType()))
-			|| ImageDecoder::CreateFromExtension(data->source))
+		const char* contentType = loadTask.GetContentType();
+		if((contentType && ImageDecoder::CreateFromMIME(contentType)) || ImageDecoder::CreateFromExtension(data->source))
 		{
 			ImageDecoder::Get()->Begin(&data->image, loadDimensionsOnly);
 			data->state = loadDimensionsOnly ? ImageNode::DownloadingDimensions : ImageNode::DownloadingContent;
@@ -212,6 +214,7 @@ bool ImageNode::ParseContent(Node* node, char* buffer, size_t count)
 		else
 		{
 			// Unsupported image format
+			Platform::Log("Unsupported image: %s", data->source);
 			ImageLoadError(node);
 			return false;
 		}
@@ -257,6 +260,7 @@ bool ImageNode::ParseContent(Node* node, char* buffer, size_t count)
 	}
 	else if (decoder->GetState() != ImageDecoder::Decoding)
 	{
+		Platform::Log("Image decode error: %s", data->source);
 		ImageLoadError(node);
 	}
 

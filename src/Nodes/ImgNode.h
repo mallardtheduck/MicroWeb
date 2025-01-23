@@ -9,13 +9,13 @@ class ImageNode: public NodeHandler
 public:
 	enum State
 	{
-		WaitingToDownload,
-		DeterminingFormat,
-		DownloadingDimensions,
-		FinishedDownloadingDimensions,
-		DownloadingContent,
-		FinishedDownloadingContent,
-		ErrorDownloading
+		WaitingToDownload = 0,
+		DeterminingFormat = 1,
+		DownloadingDimensions = 2,
+		FinishedDownloadingDimensions = 3,
+		DownloadingContent = 4,
+		FinishedDownloadingContent = 5,
+		ErrorDownloading = 6
 	};
 
 	class Data
