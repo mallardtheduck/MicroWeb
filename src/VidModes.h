@@ -28,4 +28,11 @@ VideoModeInfo* ShowVideoModePicker(int defaultSelection);
 
 extern VideoModeInfo VideoModeList[];
 
+static const int HP95LX = 13;
+static const int Hercules = 10;
+static const int CGA = 0;
+static const int CGAPalmtop = 1;
+static const int EGA = 6;
+static const int VGA = 8;
+
 #endif

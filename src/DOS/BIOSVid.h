@@ -27,11 +27,15 @@ public:
 	virtual void Init(VideoModeInfo* inVideoModeInfo);
 	virtual void Shutdown();
 
+	virtual bool FastBlitLine(int x, int y, int w, void* data, bool invert);
+	virtual bool FastScroll(int top, int bottom, int w, int lines);
+
 private:
 	int GetScreenMode();
 	bool SetScreenMode(int screenMode);
 
 	int startingScreenMode;
+	bool hplxEnabled;
 };
 
 #endif

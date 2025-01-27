@@ -50,6 +50,9 @@ public:
 	DrawSurface* drawSurface;
 	ColourScheme colourScheme;
 	uint8_t* paletteLUT;
+
+	virtual bool FastBlitLine(int x, int y, int w, void* data, bool invert) { return false; }
+	virtual bool FastScroll(int top, int bottom, int w, int lines) { return false; }
 	
 protected:
 	VideoModeInfo* videoMode;

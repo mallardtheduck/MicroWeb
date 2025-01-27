@@ -28,8 +28,9 @@
 #include "../Draw/Surf8bpp.h"
 #include "Surf1512.h"
 #include "../VidModes.h"
+#include "HPLX.h"
 
-BIOSVideoDriver::BIOSVideoDriver()
+BIOSVideoDriver::BIOSVideoDriver() : hplxEnabled(false)
 {
 	startingScreenMode = -1;
 }
@@ -182,6 +183,20 @@ void BIOSVideoDriver::Init(VideoModeInfo* inVideoModeInfo)
 			offset += screenPitch;
 		}
 	}
+
+	if(videoMode == &VideoModeList[CGAPalmtop])
+	{
+		if(Check5f())
+		{
+			Platform::Log("HP-LX Palmtop int 5F services detected.");
+			hplxEnabled = true;
+		}
+		else
+		{
+			Platform::Log("HP-LX Palmtop int 5F services NOT detected.");
+			hplxEnabled = false;
+		}
+	}
 }
 
 void BIOSVideoDriver::Shutdown()
@@ -213,4 +228,16 @@ bool BIOSVideoDriver::SetScreenMode(int screenMode)
 	return GetScreenMode() == screenMode;
 }
 
+bool BIOSVideoDriver::FastBlitLine(int x, int y, int w, void* data, bool invert)
+{
+	if(!hplxEnabled) return false;
+	HPLXBlitLine(x, y, w, data, invert);
+	return true;
+}
 
+bool BIOSVideoDriver::FastScroll(int top, int bottom, int w, int lines)
+{
+	if(!hplxEnabled) return false;
+	HPLXScroll(top, bottom, w, lines);
+	return true;
+}

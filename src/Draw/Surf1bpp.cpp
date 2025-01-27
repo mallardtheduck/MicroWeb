@@ -338,8 +338,11 @@ void DrawSurface_1BPP::DrawString(DrawContext& context, Font* font, const char* 
 						}
 					}
 
-					VRAMptr[i] &= ~(glyphPixels >> writeOffset);
-					VRAMptr[i + 1] &= ~(glyphPixels << (8 - writeOffset));
+					// if(!Platform::video->FastBlitLine(x + (i * 8), outY, 8, &glyphPixels, true))
+					// {
+						VRAMptr[i] &= ~(glyphPixels >> writeOffset);
+						VRAMptr[i + 1] &= ~(glyphPixels << (8 - writeOffset));
+					// }
 				}
 
 				outY++;
@@ -376,9 +379,11 @@ void DrawSurface_1BPP::DrawString(DrawContext& context, Font* font, const char* 
 							glyphPixels |= (glyphPixels >> 1);
 						}
 					}
-
-					VRAMptr[i] |= (glyphPixels >> writeOffset);
-					VRAMptr[i + 1] |= (glyphPixels << (8 - writeOffset));
+					// if(!Platform::video->FastBlitLine(x + (i * 8), outY, 8, &glyphPixels, false))
+					// {
+						VRAMptr[i] |= (glyphPixels >> writeOffset);
+						VRAMptr[i + 1] |= (glyphPixels << (8 - writeOffset));
+					// }
 				}
 
 				outY++;
@@ -450,10 +455,26 @@ void DrawSurface_1BPP::BlitImage(DrawContext& context, Image* image, int x, int 
 
 	uint8_t invertMask = App::config.invertScreen ? 0xff : 0;
 
+	if(destWidth == srcWidth)
+	{
+		bool hasFastBlit = true;
+		MemBlockHandle* imageLines = image->lines.Get<MemBlockHandle*>();
+		for (int j = 0; j < destHeight; j++){
+			MemBlockHandle imageLine = imageLines[j + srcY];
+			uint8_t* src = imageLine.Get<uint8_t*>();
+			if(!Platform::video->FastBlitLine(x, y + j, srcWidth, src, true))
+			{
+				hasFastBlit = false;
+				break;
+			}
+		}
+		if(hasFastBlit) return;
+	}
+
+	MemBlockHandle* imageLines = image->lines.Get<MemBlockHandle*>();
 	// Blit the image data line by line
 	for (int j = 0; j < destHeight; j++)
 	{
-		MemBlockHandle* imageLines = image->lines.Get<MemBlockHandle*>();
 		MemBlockHandle imageLine = imageLines[j + srcY];
 		uint8_t* src = imageLine.Get<uint8_t*>() + (srcX >> 3);
 		uint8_t* dest = lines[y + j] + (x >> 3);
@@ -622,6 +643,8 @@ void DrawSurface_1BPP::Clear()
 
 void DrawSurface_1BPP::ScrollScreen(int top, int bottom, int width, int amount)
 {
+	// if(Platform::video->FastScroll(top, bottom, width, amount)) return;
+
 	width >>= 3;
 
 	if (amount > 0)
